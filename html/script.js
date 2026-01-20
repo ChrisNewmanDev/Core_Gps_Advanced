@@ -1,5 +1,6 @@
 let markers = [];
 let markersVisible = true;
+let receiveLocationsAllowed = false;
 let markerToDelete = null;
 let markerToShare = null;
 let receivedMarkerData = null;
@@ -9,6 +10,7 @@ const closeBtn = document.getElementById('closeBtn');
 const markBtn = document.getElementById('markBtn');
 const locationLabel = document.getElementById('locationLabel');
 const toggleMarkers = document.getElementById('toggleMarkers');
+const toggleReceiveLocations = document.getElementById('toggleReceiveLocations');
 const markersList = document.getElementById('markersList');
 const markerCount = document.getElementById('markerCount');
 const confirmModal = document.getElementById('confirmModal');
@@ -28,6 +30,7 @@ const receiveStreet = document.getElementById('receiveStreet');
 closeBtn.addEventListener('click', closeUI);
 markBtn.addEventListener('click', markLocation);
 toggleMarkers.addEventListener('change', toggleMarkersVisibility);
+toggleReceiveLocations.addEventListener('change', toggleReceiveLocations_handler);
 confirmDelete.addEventListener('click', handleConfirmDelete);
 cancelDelete.addEventListener('click', closeConfirmModal);
 confirmShare.addEventListener('click', handleConfirmShare);
@@ -91,7 +94,7 @@ function openUI(markersData, visible) {
 
 function closeUI() {
     gpsContainer.classList.remove('active');
-    fetch(`https://${GetParentResourceName()}/closeUI`, {
+    fetch(`https://${resourceName}/closeUI`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -107,7 +110,7 @@ function markLocation() {
         return;
     }
     
-    fetch(`https://${GetParentResourceName()}/markLocation`, {
+    fetch(`https://${resourceName}/markLocation`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -121,12 +124,24 @@ function markLocation() {
 function toggleMarkersVisibility() {
     markersVisible = toggleMarkers.checked;
     
-    fetch(`https://${GetParentResourceName()}/toggleMarkers`, {
+    fetch(`https://${resourceName}/toggleMarkers`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
         },
         body: JSON.stringify({ visible: markersVisible })
+    });
+}
+
+function toggleReceiveLocations_handler() {
+    receiveLocationsAllowed = toggleReceiveLocations.checked;
+    
+    fetch(`https://${resourceName}/toggleReceiveLocations`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ allowed: receiveLocationsAllowed })
     });
 }
 
@@ -158,17 +173,9 @@ function createMarkerElement(marker, index) {
     const div = document.createElement('div');
     div.className = 'marker-item';
     
-    const coords = `X: ${marker.coords.x.toFixed(1)}, Y: ${marker.coords.y.toFixed(1)}`;
-    const date = marker.timestamp ? new Date(marker.timestamp * 1000).toLocaleString() : 'Unknown';
-    
     div.innerHTML = `
         <div class="marker-header">
             <div class="marker-label">${escapeHtml(marker.label)}</div>
-        </div>
-        <div class="marker-info">
-            ${marker.street ? `📍 ${escapeHtml(marker.street)}` : ''}<br>
-            📌 ${coords}<br>
-            🕐 ${date}
         </div>
         <div class="marker-actions">
             <button class="marker-btn waypoint" data-index="${index}">Waypoint</button>
@@ -189,7 +196,7 @@ function createMarkerElement(marker, index) {
 }
 
 function setWaypoint(index) {
-    fetch(`https://${GetParentResourceName()}/setWaypoint`, {
+    fetch(`https://${resourceName}/setWaypoint`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -210,7 +217,7 @@ function closeConfirmModal() {
 
 function handleConfirmDelete() {
     if (markerToDelete !== null) {
-        fetch(`https://${GetParentResourceName()}/removeMarker`, {
+        fetch(`https://${resourceName}/removeMarker`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -268,7 +275,7 @@ function showReceiveModal(markerData, sender) {
 
 function handleAcceptLocation() {
     if (receivedMarkerData) {
-        fetch(`https://${GetParentResourceName()}/acceptSharedLocation`, {
+        fetch(`https://${resourceName}/acceptSharedLocation`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -282,7 +289,7 @@ function handleAcceptLocation() {
 }
 
 function handleDeclineLocation() {
-    fetch(`https://${GetParentResourceName()}/declineSharedLocation`, {
+    fetch(`https://${resourceName}/declineSharedLocation`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
@@ -295,11 +302,16 @@ function handleDeclineLocation() {
 function closeReceiveModal() {
     receiveModal.classList.remove('active');
     receivedMarkerData = null;
+    fetch(`https://${resourceName}/closeReceiveModal`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({})
+    });
 }
 
-function GetParentResourceName() {
-    return window.location.hostname === '' ? 'core_gps' : window.location.hostname;
-}
+const resourceName = (typeof GetParentResourceName === 'function' && GetParentResourceName()) || 'Core_Gps_Advanced';
 
 function escapeHtml(text) {
     const div = document.createElement('div');

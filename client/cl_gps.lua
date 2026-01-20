@@ -3,6 +3,7 @@ local PlayerData = {}
 local savedMarkers = {}
 local blips = {}
 local markersVisible = true
+local receiveLocationsAllowed = false
 local isUIOpen = false
 local currentGPSId = nil
 
@@ -46,6 +47,18 @@ function GetGPSItem()
     return false, nil
 end
 
+function CountGPSItems()
+    local Player = QBCore.Functions.GetPlayerData()
+    if not Player then return 0 end
+    local count = 0
+    for _, item in pairs(Player.items) do
+        if item and item.name == Config.ItemName then
+            count = count + 1
+        end
+    end
+    return count
+end
+
 RegisterNetEvent('core_gps:client:useItem', function(item)
     if item and item.info and item.info.gps_id then
         currentGPSId = item.info.gps_id
@@ -81,6 +94,7 @@ end)
 
 RegisterNUICallback('markLocation', function(data, cb)
     if not currentGPSId then
+        QBCore.Functions.Notify('GPS device not detected. Please try closing and reopening the GPS.', 'error')
         cb('error')
         return
     end
@@ -93,7 +107,7 @@ RegisterNUICallback('markLocation', function(data, cb)
         label = data.label or 'Marked Location',
         coords = {x = coords.x, y = coords.y, z = coords.z},
         street = streetName,
-        timestamp = os.time()
+        timestamp = (os and os.time and os.time()) or math.floor(GetGameTimer() / 1000)
     }
     TriggerServerEvent('core_gps:server:addMarker', currentGPSId, markerData)
     cb('ok')
@@ -130,6 +144,11 @@ RegisterNUICallback('toggleMarkers', function(data, cb)
     cb('ok')
 end)
 
+RegisterNUICallback('toggleReceiveLocations', function(data, cb)
+    receiveLocationsAllowed = data.allowed
+    cb('ok')
+end)
+
 RegisterNUICallback('setWaypoint', function(data, cb)
     local marker = savedMarkers[data.index]
     if marker then
@@ -157,7 +176,13 @@ RegisterNetEvent('core_gps:client:updateMarkers', function(markers)
     end
 end)
 
-RegisterNetEvent('core_gps:client:receiveSharedMarker', function(markerData, senderName)
+RegisterNetEvent('core_gps:client:receiveSharedMarker', function(markerData, senderName, senderSource)
+    if not receiveLocationsAllowed then
+        QBCore.Functions.Notify('You have disabled location sharing. Enable "Allow Receiving Locations" in your GPS settings.', 'error')
+        TriggerServerEvent('core_gps:server:notifyShareRejected', senderSource)
+        return
+    end
+    SetNuiFocus(true, true)
     SendNUIMessage({
         action = 'receiveLocation',
         markerData = markerData,
@@ -179,6 +204,12 @@ end)
 
 RegisterNUICallback('declineSharedLocation', function(data, cb)
     QBCore.Functions.Notify('Location declined', 'error')
+    SetNuiFocus(false, false)
+    cb('ok')
+end)
+
+RegisterNUICallback('closeReceiveModal', function(data, cb)
+    SetNuiFocus(false, false)
     cb('ok')
 end)
 
@@ -193,6 +224,11 @@ end)
 function RefreshBlips()
     ClearAllBlips()
     if not markersVisible then return end
+    local gpsCount = CountGPSItems()
+    if gpsCount > 1 then
+        QBCore.Functions.Notify('You have too many GPS devices on you to display map data', 'error')
+        return
+    end
     local hasItem, itemData = GetGPSItem()
     if not hasItem or not itemData or not itemData.info or not itemData.info.gps_id then 
         return
@@ -269,7 +305,5 @@ AddEventHandler('onResourceStop', function(resourceName)
         if isUIOpen then
             SetNuiFocus(false, false)
         end
-    end
-end)
     end
 end)

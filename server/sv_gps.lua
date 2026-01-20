@@ -2,6 +2,10 @@ local QBCore = exports['qb-core']:GetCoreObject()
 
 local gpsMarkers = {}
 
+QBCore.Functions.CreateUseableItem(Config.ItemName, function(source, item)
+    TriggerClientEvent('core_gps:client:useItem', source, item)
+end)
+
 function GenerateGPSId(playerName)
     local charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
     local formattedName = playerName:upper():gsub(" ", "_")
@@ -11,8 +15,8 @@ function GenerateGPSId(playerName)
         randomCode = randomCode .. string.sub(charset, rand, rand)
     end
     local id = "GPS-" .. formattedName .. "-" .. randomCode
-    local result = MySQL.scalar.await('SELECT COUNT(*) FROM core_gps_advanced_devices WHERE gps_id = ?', {id})
-    if result and result > 0 then
+    local result = exports['oxmysql']:executeSync('SELECT COUNT(*) as count FROM core_gps_advanced_devices WHERE gps_id = ?', {id})
+    if result and result[1] and result[1].count > 0 then
         return GenerateGPSId(playerName)
     end
     return id
@@ -24,7 +28,7 @@ RegisterNetEvent('core_gps:server:registerDevice', function()
     if not Player then return end
     local playerName = Player.PlayerData.charinfo.firstname .. " " .. Player.PlayerData.charinfo.lastname
     local gpsId = GenerateGPSId(playerName)
-    MySQL.insert.await('INSERT INTO core_gps_advanced_devices (gps_id) VALUES (?)', {gpsId})
+    exports['oxmysql']:insertSync('INSERT INTO core_gps_advanced_devices (gps_id) VALUES (?)', {gpsId})
     Player.Functions.AddItem('core_gps_a', 1, false, {gps_id = gpsId})
     TriggerClientEvent('inventory:client:ItemBox', src, QBCore.Shared.Items['core_gps_a'], "add")
     TriggerClientEvent('QBCore:Notify', src, 'GPS Device ID: ' .. gpsId, 'success')
@@ -36,7 +40,7 @@ QBCore.Commands.Add('givegpsa', 'Give yourself a GPS device', {}, false, functio
     if not Player then return end
     local playerName = Player.PlayerData.charinfo.firstname .. " " .. Player.PlayerData.charinfo.lastname
     local gpsId = GenerateGPSId(playerName)
-    MySQL.insert.await('INSERT INTO core_gps_advanced_devices (gps_id) VALUES (?)', {gpsId})
+    exports['oxmysql']:insertSync('INSERT INTO core_gps_advanced_devices (gps_id) VALUES (?)', {gpsId})
     Player.Functions.AddItem('core_gps_a', 1, false, {gps_id = gpsId})
     TriggerClientEvent('inventory:client:ItemBox', src, QBCore.Shared.Items['core_gps_a'], "add")
     TriggerClientEvent('QBCore:Notify', src, 'GPS Device ID: ' .. gpsId, 'success')
@@ -46,7 +50,7 @@ RegisterNetEvent('core_gps:server:loadMarkers', function(gpsId)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
     if not Player or not gpsId then return end
-    local result = MySQL.query.await('SELECT * FROM core_gps_advanced WHERE gps_id = ? ORDER BY id ASC', {gpsId})
+    local result = exports['oxmysql']:executeSync('SELECT * FROM core_gps_advanced WHERE gps_id = ? ORDER BY id ASC', {gpsId})
     if result then
         local markers = {}
         for _, row in ipairs(result) do
@@ -68,7 +72,7 @@ end)
 RegisterNetEvent('core_gps:server:addMarker', function(gpsId, markerData)
     local src = source
     local Player = QBCore.Functions.GetPlayer(src)
-    if not Player or not gpsId then return end
+    if not Player or not gpsId or not markerData then return end
     if not gpsMarkers[gpsId] then
         gpsMarkers[gpsId] = {}
     end
@@ -76,7 +80,7 @@ RegisterNetEvent('core_gps:server:addMarker', function(gpsId, markerData)
         TriggerClientEvent('QBCore:Notify', src, 'This GPS has reached the maximum number of markers (' .. Config.MaxMarkers .. ')', 'error')
         return
     end
-    local insertId = MySQL.insert.await('INSERT INTO core_gps_advanced (gps_id, label, coords, street, timestamp) VALUES (?, ?, ?, ?, ?)', {
+    local insertId = exports['oxmysql']:insertSync('INSERT INTO core_gps_advanced (gps_id, label, coords, street, timestamp) VALUES (?, ?, ?, ?, ?)', {
         gpsId,
         markerData.label,
         json.encode(markerData.coords),
@@ -99,7 +103,7 @@ RegisterNetEvent('core_gps:server:removeMarker', function(gpsId, index)
     if not Player or not gpsId then return end
     if gpsMarkers[gpsId] and gpsMarkers[gpsId][index] then
         local markerId = gpsMarkers[gpsId][index].id
-        MySQL.query.await('DELETE FROM core_gps_advanced WHERE id = ? AND gps_id = ?', {markerId, gpsId})
+        exports['oxmysql']:executeSync('DELETE FROM core_gps_advanced WHERE id = ? AND gps_id = ?', {markerId, gpsId})
         table.remove(gpsMarkers[gpsId], index)
         TriggerClientEvent('core_gps:client:updateMarkers', src, gpsMarkers[gpsId])
         TriggerClientEvent('QBCore:Notify', src, 'Marker removed!', 'success')
@@ -118,9 +122,19 @@ RegisterNetEvent('core_gps:server:shareMarker', function(gpsId, targetId, marker
     if gpsMarkers[gpsId] and gpsMarkers[gpsId][markerIndex] then
         local markerData = gpsMarkers[gpsId][markerIndex]
         local senderName = Player.PlayerData.charinfo.firstname .. ' ' .. Player.PlayerData.charinfo.lastname
-        TriggerClientEvent('core_gps:client:receiveSharedMarker', TargetPlayer.PlayerData.source, markerData, senderName)
+        local targetSource = TargetPlayer.PlayerData.source
+        TriggerClientEvent('core_gps:client:receiveSharedMarker', targetSource, markerData, senderName, src)
         TriggerClientEvent('core_gps:client:shareResult', src, true, 'Location shared successfully!')
     else
         TriggerClientEvent('core_gps:client:shareResult', src, false, 'Marker not found')
     end
+end)
+
+RegisterNetEvent('core_gps:server:notifyShareRejected', function(senderSource)
+    local src = source
+    local Player = QBCore.Functions.GetPlayer(src)
+    if not Player then return end
+    local receiverName = Player.PlayerData.charinfo.firstname .. ' ' .. Player.PlayerData.charinfo.lastname
+    
+    TriggerClientEvent('QBCore:Notify', senderSource, receiverName .. ' is not accepting shared locations.', 'error')
 end)
