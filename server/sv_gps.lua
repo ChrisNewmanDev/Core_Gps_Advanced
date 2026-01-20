@@ -51,6 +51,11 @@ RegisterNetEvent('core_gps:server:loadMarkers', function(gpsId)
     local Player = QBCore.Functions.GetPlayer(src)
     if not Player or not gpsId then return end
     local result = exports['oxmysql']:executeSync('SELECT * FROM core_gps_advanced WHERE gps_id = ? ORDER BY id ASC', {gpsId})
+    local deviceResult = exports['oxmysql']:executeSync('SELECT allow_receive_locations FROM core_gps_advanced_devices WHERE gps_id = ?', {gpsId})
+    local allowReceive = false
+    if deviceResult and deviceResult[1] then
+        allowReceive = deviceResult[1].allow_receive_locations == 1
+    end
     if result then
         local markers = {}
         for _, row in ipairs(result) do
@@ -67,6 +72,7 @@ RegisterNetEvent('core_gps:server:loadMarkers', function(gpsId)
         gpsMarkers[gpsId] = {}
     end
     TriggerClientEvent('core_gps:client:updateMarkers', src, gpsMarkers[gpsId])
+    TriggerClientEvent('core_gps:client:updateReceiveSetting', src, allowReceive)
 end)
 
 RegisterNetEvent('core_gps:server:addMarker', function(gpsId, markerData)
@@ -137,4 +143,27 @@ RegisterNetEvent('core_gps:server:notifyShareRejected', function(senderSource)
     local receiverName = Player.PlayerData.charinfo.firstname .. ' ' .. Player.PlayerData.charinfo.lastname
     
     TriggerClientEvent('QBCore:Notify', senderSource, receiverName .. ' is not accepting shared locations.', 'error')
+end)
+
+RegisterNetEvent('core_gps:server:renameMarker', function(gpsId, index, newLabel)
+    local src = source
+    local Player = QBCore.Functions.GetPlayer(src)
+    if not Player or not gpsId or not newLabel then return end
+    
+    if gpsMarkers[gpsId] and gpsMarkers[gpsId][index] then
+        local markerId = gpsMarkers[gpsId][index].id
+        exports['oxmysql']:executeSync('UPDATE core_gps_advanced SET label = ? WHERE id = ? AND gps_id = ?', {newLabel, markerId, gpsId})
+        gpsMarkers[gpsId][index].label = newLabel
+        TriggerClientEvent('core_gps:client:updateMarkers', src, gpsMarkers[gpsId])
+        TriggerClientEvent('QBCore:Notify', src, 'Location renamed!', 'success')
+    end
+end)
+
+RegisterNetEvent('core_gps:server:updateReceiveSetting', function(gpsId, allowed)
+    local src = source
+    local Player = QBCore.Functions.GetPlayer(src)
+    if not Player or not gpsId then return end
+    
+    local allowValue = allowed and 1 or 0
+    exports['oxmysql']:executeSync('UPDATE core_gps_advanced_devices SET allow_receive_locations = ? WHERE gps_id = ?', {allowValue, gpsId})
 end)

@@ -82,7 +82,8 @@ function OpenGPSUI()
         action = 'openUI',
         markers = savedMarkers,
         markersVisible = markersVisible,
-        gpsId = currentGPSId
+        gpsId = currentGPSId,
+        receiveLocationsAllowed = receiveLocationsAllowed
     })
 end
 
@@ -131,6 +132,15 @@ RegisterNUICallback('shareMarker', function(data, cb)
     cb('ok')
 end)
 
+RegisterNUICallback('renameMarker', function(data, cb)
+    if not currentGPSId then
+        cb('error')
+        return
+    end
+    TriggerServerEvent('core_gps:server:renameMarker', currentGPSId, data.index, data.newLabel)
+    cb('ok')
+end)
+
 RegisterNUICallback('toggleMarkers', function(data, cb)
     markersVisible = data.visible
     if markersVisible then
@@ -146,6 +156,9 @@ end)
 
 RegisterNUICallback('toggleReceiveLocations', function(data, cb)
     receiveLocationsAllowed = data.allowed
+    if currentGPSId then
+        TriggerServerEvent('core_gps:server:updateReceiveSetting', currentGPSId, receiveLocationsAllowed)
+    end
     cb('ok')
 end)
 
@@ -173,6 +186,16 @@ RegisterNetEvent('core_gps:client:updateMarkers', function(markers)
         else
             ClearAllBlips()
         end
+    end
+end)
+
+RegisterNetEvent('core_gps:client:updateReceiveSetting', function(allowed)
+    receiveLocationsAllowed = allowed
+    if isUIOpen then
+        SendNUIMessage({
+            action = 'updateReceiveSetting',
+            allowed = receiveLocationsAllowed
+        })
     end
 end)
 

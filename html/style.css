@@ -163,6 +163,24 @@ body {
     background: #c0392b;
 }
 
+.btn-warning {
+    background: #f39c12;
+    color: white;
+}
+
+.btn-warning:hover {
+    background: #e67e22;
+}
+
+.btn-success {
+    background: #27ae60;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #229954;
+}
+
 .toggle-section {
     background: rgba(255, 255, 255, 0.06);
     padding: 15px;
@@ -303,6 +321,15 @@ body {
 
 .marker-btn.share:hover {
     background: rgba(46, 204, 113, 1);
+}
+
+.marker-btn.rename {
+    background: rgba(243, 156, 18, 0.7);
+    color: white;
+}
+
+.marker-btn.rename:hover {
+    background: rgba(243, 156, 18, 1);
 }
 
 .marker-btn.delete {

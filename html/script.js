@@ -3,7 +3,9 @@ let markersVisible = true;
 let receiveLocationsAllowed = false;
 let markerToDelete = null;
 let markerToShare = null;
+let markerToRename = null;
 let receivedMarkerData = null;
+let searchFilter = '';
 
 const gpsContainer = document.getElementById('gpsContainer');
 const closeBtn = document.getElementById('closeBtn');
@@ -13,13 +15,18 @@ const toggleMarkers = document.getElementById('toggleMarkers');
 const toggleReceiveLocations = document.getElementById('toggleReceiveLocations');
 const markersList = document.getElementById('markersList');
 const markerCount = document.getElementById('markerCount');
+const searchInput = document.getElementById('searchInput');
 const confirmModal = document.getElementById('confirmModal');
 const shareModal = document.getElementById('shareModal');
 const receiveModal = document.getElementById('receiveModal');
+const renameModal = document.getElementById('renameModal');
 const confirmDelete = document.getElementById('confirmDelete');
 const cancelDelete = document.getElementById('cancelDelete');
 const confirmShare = document.getElementById('confirmShare');
 const cancelShare = document.getElementById('cancelShare');
+const confirmRename = document.getElementById('confirmRename');
+const cancelRename = document.getElementById('cancelRename');
+const renameInput = document.getElementById('renameInput');
 const sharePlayerId = document.getElementById('sharePlayerId');
 const acceptLocation = document.getElementById('acceptLocation');
 const declineLocation = document.getElementById('declineLocation');
@@ -35,6 +42,8 @@ confirmDelete.addEventListener('click', handleConfirmDelete);
 cancelDelete.addEventListener('click', closeConfirmModal);
 confirmShare.addEventListener('click', handleConfirmShare);
 cancelShare.addEventListener('click', closeShareModal);
+confirmRename.addEventListener('click', handleConfirmRename);
+cancelRename.addEventListener('click', closeRenameModal);
 acceptLocation.addEventListener('click', handleAcceptLocation);
 declineLocation.addEventListener('click', handleDeclineLocation);
 
@@ -44,9 +53,20 @@ locationLabel.addEventListener('keypress', (e) => {
     }
 });
 
+searchInput.addEventListener('input', (e) => {
+    searchFilter = e.target.value.toLowerCase();
+    renderMarkers();
+});
+
 sharePlayerId.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         handleConfirmShare();
+    }
+});
+
+renameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        handleConfirmRename();
     }
 });
 
@@ -58,6 +78,8 @@ document.addEventListener('keydown', (e) => {
             closeConfirmModal();
         } else if (shareModal.classList.contains('active')) {
             closeShareModal();
+        } else if (renameModal.classList.contains('active')) {
+            closeRenameModal();
         } else if (gpsContainer.classList.contains('active')) {
             closeUI();
         }
@@ -69,10 +91,13 @@ window.addEventListener('message', (event) => {
     
     switch(data.action) {
         case 'openUI':
-            openUI(data.markers, data.markersVisible);
+            openUI(data.markers, data.markersVisible, data.receiveLocationsAllowed);
             break;
         case 'updateMarkers':
             updateMarkers(data.markers);
+            break;
+        case 'updateReceiveSetting':
+            updateReceiveSetting(data.allowed);
             break;
         case 'receiveLocation':
             showReceiveModal(data.markerData, data.senderName);
@@ -80,13 +105,17 @@ window.addEventListener('message', (event) => {
     }
 });
 
-function openUI(markersData, visible) {
+function openUI(markersData, visible, receiveAllowed) {
     markers = markersData || [];
     markersVisible = visible !== undefined ? visible : true;
+    receiveLocationsAllowed = receiveAllowed !== undefined ? receiveAllowed : false;
     
     gpsContainer.classList.add('active');
     toggleMarkers.checked = markersVisible;
+    toggleReceiveLocations.checked = receiveLocationsAllowed;
     
+    searchFilter = '';
+    searchInput.value = '';
     renderMarkers();
     locationLabel.value = '';
     locationLabel.focus();
@@ -150,6 +179,11 @@ function updateMarkers(markersData) {
     renderMarkers();
 }
 
+function updateReceiveSetting(allowed) {
+    receiveLocationsAllowed = allowed;
+    toggleReceiveLocations.checked = allowed;
+}
+
 function renderMarkers() {
     markerCount.textContent = markers.length;
     markersList.innerHTML = '';
@@ -163,9 +197,26 @@ function renderMarkers() {
         return;
     }
     
+    // Filter markers based on search query
+    const filteredMarkers = markers.filter((marker, index) => {
+        if (!searchFilter) return true;
+        return marker.label.toLowerCase().includes(searchFilter);
+    });
+    
+    if (filteredMarkers.length === 0) {
+        markersList.innerHTML = `
+            <div class="empty-state">
+                <p>No locations match your search.<br>Try a different search term.</p>
+            </div>
+        `;
+        return;
+    }
+    
     markers.forEach((marker, index) => {
-        const markerItem = createMarkerElement(marker, index);
-        markersList.appendChild(markerItem);
+        if (!searchFilter || marker.label.toLowerCase().includes(searchFilter)) {
+            const markerItem = createMarkerElement(marker, index);
+            markersList.appendChild(markerItem);
+        }
     });
 }
 
@@ -179,18 +230,21 @@ function createMarkerElement(marker, index) {
         </div>
         <div class="marker-actions">
             <button class="marker-btn waypoint" data-index="${index}">Waypoint</button>
-            <button class="marker-btn share" data-index="${index}">Share</button>
             <button class="marker-btn delete" data-index="${index}">Remove</button>
+            <button class="marker-btn rename" data-index="${index}">Rename</button>
+            <button class="marker-btn share" data-index="${index}">Share</button>
         </div>
     `;
     
     const waypointBtn = div.querySelector('.waypoint');
-    const shareBtn = div.querySelector('.share');
     const deleteBtn = div.querySelector('.delete');
+    const renameBtn = div.querySelector('.rename');
+    const shareBtn = div.querySelector('.share');
     
     waypointBtn.addEventListener('click', () => setWaypoint(index));
-    shareBtn.addEventListener('click', () => openShareModal(index));
     deleteBtn.addEventListener('click', () => openConfirmModal(index));
+    renameBtn.addEventListener('click', () => openRenameModal(index));
+    shareBtn.addEventListener('click', () => openShareModal(index));
     
     return div;
 }
@@ -240,6 +294,46 @@ function closeShareModal() {
     markerToShare = null;
     shareModal.classList.remove('active');
     sharePlayerId.value = '';
+}
+
+function openRenameModal(index) {
+    markerToRename = index;
+    const marker = markers[index];
+    if (marker) {
+        renameInput.value = marker.label;
+        renameModal.classList.add('active');
+        renameInput.focus();
+        renameInput.select();
+    }
+}
+
+function closeRenameModal() {
+    markerToRename = null;
+    renameModal.classList.remove('active');
+    renameInput.value = '';
+}
+
+function handleConfirmRename() {
+    const newLabel = renameInput.value.trim();
+    
+    if (!newLabel) {
+        return;
+    }
+    
+    if (markerToRename !== null) {
+        fetch(`https://${resourceName}/renameMarker`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                index: markerToRename + 1,
+                newLabel: newLabel
+            })
+        });
+    }
+    
+    closeRenameModal();
 }
 
 function handleConfirmShare() {
