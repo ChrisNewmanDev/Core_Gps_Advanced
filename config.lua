@@ -1,5 +1,9 @@
 Config = {}
 
+Config.Version = '1.0.0'
+Config.ResourceName = 'Core_Gps_Advanced'
+Config.GithubRepo = 'ChrisNewmanDev/Core_Gps_Advanced'
+
 Config.ItemName = 'core_gps_a'
 
 Config.MarkerSettings = {

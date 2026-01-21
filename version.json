@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "changelog": {
+    "1.0.0": {
+      "date": "2026-01-21",
+      "changes": [
+        "Initial release",
+        "Device-based GPS system with unique IDs",
+        "Mark and save locations with custom labels",
+        "Visual map markers and waypoint system",
+        "Share locations between players",
+        "Modern UI with keyboard shortcuts"
+      ],
+      "files_to_update": []
+    }
+  }
+}

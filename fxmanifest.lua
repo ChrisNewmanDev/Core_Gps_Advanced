@@ -2,6 +2,7 @@ fx_version 'cerulean'
 game 'gta5'
 
 description 'core_gps - Location Marker Management System'
+author 'Core Scripts'
 version '1.0.0'
 
 shared_scripts {
@@ -21,7 +22,8 @@ ui_page 'html/index.html'
 files {
     'html/index.html',
     'html/style.css',
-    'html/script.js'
+    'html/script.js',
+    'version.json'
 }
 
 lua54 'yes'

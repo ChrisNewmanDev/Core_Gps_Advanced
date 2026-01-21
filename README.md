@@ -113,6 +113,11 @@ Edit `config.lua` to customize:
 ```lua
 Config = {}
 
+-- Version Information (Update Config.GithubRepo with your repository)
+Config.Version = '1.0.0'
+Config.ResourceName = 'Core_Gps_Advanced'
+Config.GithubRepo = 'ChrisNewmanDev/Core_Gps_Advanced'
+
 Config.ItemName = 'core_gps_a'  -- Item name (must match items.lua)
 Config.MaxMarkers = 50        -- Maximum markers per GPS device
 
@@ -126,4 +131,68 @@ Config.BlipSettings = {
 }
 ```
 
+## 🔄 Automatic Update Checker
+
+The script includes an automatic version checker that runs when the server starts. It will:
+- Check for new versions on GitHub
+- Display the latest version information in the console
+- Show changelog entries for new updates
+- List specific files that need to be updated
+- Provide a download link to the latest release
+
+**Setup:**
+1. Update `Config.GithubRepo` in `config.lua` with your GitHub repository (format: `username/repo`)
+2. Ensure `version.json` is uploaded to your GitHub repository
+3. The checker will automatically run 2 seconds after server start
+
+**Console Output Example:**
+```
+[Core_Gps_Advanced] UPDATE AVAILABLE!
+Current Version: 1.0.0
+Latest Version: 1.1.0
+
+📋 Changelog for v1.1.0:
+Release Date: 2026-01-22
+
+Changes:
+  ✓ Added new feature X
+  ✓ Fixed bug Y
+  ✓ Improved performance
+
+⚠ Files that need to be updated:
+  ➤ server/sv_gps.lua
+  ➤ config.lua
+
+Download: https://github.com/ChrisNewmanDev/Core_Gps_Advanced
+```
+
 **Enjoy your advanced GPS system!** 📍🗺️
+
+---
+
+## 📝 Changelog
+
+### Version 1.0.0 - Initial Release (January 21, 2026)
+
+#### Features
+- ✨ Device-based GPS system with unique IDs
+- 📍 Mark and save locations with custom labels
+- 🗺️ Visual map markers and blips
+- 🔄 Toggle markers on/off
+- 🚩 Set waypoints to saved locations
+- 🗑️ Delete markers with confirmation
+- 💾 Persistent storage with oxmysql
+- 📤 Share locations between players
+- ✅ Accept/decline shared locations
+- 🎒 Item-based GPS display system
+- 🎨 Modern radio-style UI
+- ⌨️ Keyboard shortcuts support
+
+#### Database
+- Created `core_gps_advanced` table for location storage
+- Created `core_gps_advanced_devices` table for device management
+
+#### Configuration
+- Customizable marker settings
+- Customizable blip settings
+- Configurable maximum markers per device
