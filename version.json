@@ -1,13 +1,12 @@
 {
-  "version": "1.0.1",
+  "github_repo": "ChrisNewmanDev/core_gps_advanced",
+  "resource_name": "core_gps_advanced",
+  "version": "1.0.2",
   "changelog": {
-    "1.0.1": {
+    "1.0.2": {
       "date": "2026-01-26",
       "changes": [
-        "Added propper versioning system (Reworked sv_gps.lua and config.lua)",
-        "SQL Name changed",
-        "Item name changed",
-        "png name changed"
+        "Fixed minor bugs"
       ],
       "files_to_update": [
         "core_gps_advanced.png",

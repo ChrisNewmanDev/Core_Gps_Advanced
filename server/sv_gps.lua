@@ -24,14 +24,7 @@ local function ParseVersion(version)
         minor = tonumber(minor) or 0,
         patch = tonumber(patch) or 0
     }
-        local versionDataRaw = LoadResourceFile(GetCurrentResourceName(), 'version.json')
-        local CURRENT_VERSION = 'unknown'
-        if versionDataRaw then
-            local success, versionData = pcall(function() return json.decode(versionDataRaw) end)
-            if success and versionData and versionData.version then
-                CURRENT_VERSION = versionData.version
-            end
-        end
+end
 
 local function CompareVersions(current, latest)
     local currentVer = ParseVersion(current)
