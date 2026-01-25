@@ -8,11 +8,12 @@ An advanced FiveM GPS Marker script for QB-Core framework featuring **device-bas
 
 ## Some Screenshots
 
-https://i.postimg.cc/f3LH88F0/GPSA1.png
 
-https://i.postimg.cc/wtvWwwPD/GPSA2.png
+![GPSA1](https://i.postimg.cc/f3LH88F0/GPSA1.png)
 
-https://i.postimg.cc/0zZWGTt2/GPSA3.png
+![GPSA2](https://i.postimg.cc/wtvWwwPD/GPSA2.png)
+
+![GPSA3](https://i.postimg.cc/0zZWGTt2/GPSA3.png)
 
 ## 🌟 Key Features
 
