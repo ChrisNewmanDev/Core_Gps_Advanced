@@ -25,4 +25,4 @@ jobs:
           git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add version.json
           git commit -m "Update version.json to $VERSION"
-          git push https://x-access-token:${{ secrets.GH_TOKEN }}@github.com/ChrisNewmanDev/core_gps_advanced.git HEAD:main
+          git push https://x-access-token:${{ secrets.GH_TOKEN_CNEW }}@github.com/ChrisNewmanDev/core_gps_advanced.git HEAD:main
