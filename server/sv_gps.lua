@@ -101,7 +101,7 @@ local function CheckVersion()
                 end
             end
             
-            print('^2Download: ^7https://github.com/' .. Config.GithubRepo .. '/releases/latest')
+                print('^2Download: ^7https://github.com/ChrisNewmanDev/core_gps_advanced/releases/latest')
         end
         
         print('^3========================================^7')
